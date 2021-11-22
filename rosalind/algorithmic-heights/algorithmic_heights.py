@@ -159,4 +159,73 @@ def insertion_sort(array):
             swaps += 1
     return(swaps)
 
+####################### Double Degree Array
+# doing it without numpy so far, but later i'll surely need it.
+# might redo this with a numpy array later once i start using the module
+
+def graph_array(matrix_size,links):
+    graph = [[0 for i in range(0,matrix_size)] for i in range(0,matrix_size)]
+    for i in range(0,len(links)):
+        graph[links[i][0]-1][links[i][1]-1] = 1
+        graph[links[i][1]-1][links[i][0]-1] = 1
+    print('   1  2  3  4  5')
+    for i in range(0, matrix_size):
+        print(i + 1, graph[i])
+    return graph
+
+def neighbor_links(graph, matrix_size = len(graph)):
+    answer = [0 for i in range(0,matrix_size)]
+    for i in range(0,matrix_size):
+        if sum(graph[i]) == 0:
+            continue
+        else:
+            for j in range(0,matrix_size):
+                if graph[i][j] == 1:
+                    answer[i] += sum(graph[j])
+    return answer
+
+lines = fileLines('rosalind_ddeg.txt') # a x b / a = number of elements / b = number of links / x y => edges of a link
+matrix_size = line_to_listofnums(lines[0])[0]
+lines.pop(0)
+
+links = []
+for i in lines:
+    links.append((line_to_listofnums(i)))
+
+graph = graph_array(matrix_size,links)
+listPrint(neighbor_links(graph),'testie')
+
+################################## Merge 2 Sorted Arrays
+
+def two_into_one(list1, list2):
+    fin = []
+    while list1 != [] and list2 != []:
+        if list1[0] > list2[0]:
+            fin.append(list2[0])
+            list2.pop(0)
+        elif list2[0] > list1[0]:
+            fin.append(list1[0])
+            list1.pop(0)
+        elif list2[0] == list1[0]:
+            fin.append(list1[0])
+            fin.append(list2[0])
+            list1.pop(0)
+            list2.pop(0)
+    if list1 == [] and list2 != []:
+        for i in list2:
+            fin.append(i)
+    if list2 == [] and list1 != []:
+        for i in list1:
+            fin.append(i)
+    return fin
+
+lines = fileLines('rosalind_mer.txt')
+
+array_lens = [int(lines[0]),int(lines[2])]
+a1, a2 = line_to_listofnums(lines[1]), line_to_listofnums(lines[3])
+
+answer = two_into_one(a1,a2)
+
+listPrint(answer, 'r_mer_res.txt')
+
 print(insertion_sort(array))
