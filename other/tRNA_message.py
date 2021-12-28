@@ -6,7 +6,7 @@ tRNA = {'A': ['GCA','GCC','GCG','GCU'], 'B': ['GAU','GAC','AAU','AAC'], 'C': ['U
           'K': ['AAA','AAG'], 'L': ['UUA','UUG','CUA','CUU','CUG','CUC'], 'M': 'AUG', 'N': ['AAU','AAC'], 'O': 'UAG',
           'P': ['CCA','CCU','CCG','CCC'], 'Q': ['CAA','CAG'], 'R': ['AGA','AGG','CGA','CGG','CGU','CGC'],
           'S': ['AGC','AGU','UCA','UCU','UCG','UCC'], 'T': ['ACA','ACC','ACU','ACG'], 'U': 'UGA',
-          'V': ['GUA','GUC','GUU','GUG'], 'W': 'UGG', 'X': '[wildcard / no AUG/UAA/UAG/UAA]', 'Y': ['UAU','UAC'],
+          'V': ['GUA','GUC','GUU','GUG'], 'W': 'UGG', 'X': 0, 'Y': ['UAU','UAC'],
           'Z': ['GAA','GAG','CAA','CAG'], 'Start': 'AUG', 'Stop': ['UAA','UAG','UAA'], '.': ['UAA','UAG','UAA']}
 
 sentence = 'Translate this sentence into 1 RNA sequence.'
@@ -17,6 +17,8 @@ def translator(AA): #AA (amino acid) is one character to be translated.
     except:
         print('The character could not be found in the codon dictionary:', AA)
     if AA in tRNA:
+        if isinstance(tRNA[AA],(int)):
+            return ''.join(random.choice(['A','U','C','G']) for i in range(3))
         if isinstance(tRNA[AA],(str)):
             return tRNA[AA]
         else: # if it's a list
