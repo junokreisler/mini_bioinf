@@ -35,7 +35,7 @@ def translate(sentence):
             translated += translator(i)
     return translated
 
-test = 'Translate this sentence into 1 RNA sequence.'
+test = 'The quick brown fox jumps over the lazy dog. \n1 2 3 4 5 6 7 8 9 0 - = / \ , [ ] \' | ! @ # $ % ^ & * ( ) _ +'
 
 decided = False
 while not decided:
