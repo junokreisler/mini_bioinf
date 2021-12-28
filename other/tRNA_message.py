@@ -9,8 +9,6 @@ tRNA = {'A': ['GCA','GCC','GCG','GCU'], 'B': ['GAU','GAC','AAU','AAC'], 'C': ['U
           'V': ['GUA','GUC','GUU','GUG'], 'W': 'UGG', 'X': 0, 'Y': ['UAU','UAC'],
           'Z': ['GAA','GAG','CAA','CAG'], 'Start': 'AUG', 'Stop': ['UAA','UAG','UAA'], '.': ['UAA','UAG','UAA']}
 
-sentence = 'Translate this sentence into 1 RNA sequence.'
-
 def translator(AA): #AA (amino acid) is one character to be translated.
     try:
         AA = AA.upper()
