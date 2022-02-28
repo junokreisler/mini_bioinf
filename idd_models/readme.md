@@ -1,8 +1,8 @@
 Here I recreate the models from the Infectious Disease Dynamics course. 
 I portray them using 
 
-(1) a graph that shows how numbers/proportions of modeled populations (S, I etc.) change over time
-(2) a heatmap which shows the spatial changes of disease spread over time.
+* a graph that shows how numbers/proportions of modeled populations (S, I etc.) change over time
+* a heatmap which shows the spatial changes of disease spread over time.
 
 ## List of models:
 
