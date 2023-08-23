@@ -65,34 +65,26 @@ for (i in c(1,length(list.files(uploader_path)))) {
 rawfile_md5sums <- data.frame("file name" = files_for_sums,"file checksum" = md5sums_vector)
 write.table(rawfile_md5sums, file = paste(output_path,'rawfile_md5sums.tsv',sep='/'), sep = '\t')
 
-## PROCESSED FILES
-
-# obtain .tar files for md5sums from the SUSHI folder
+## PROCESSED FILES - filtered
 
 data_path = paste('/srv/gstore',sushi_processed_path,'/', sep='')
 
 processed_data_paths <- paste(data_path, list.files(data_path, "[o*]"), sep = '')
 md5sums_vector_proc_interim <- c()
 
-# RAW FEATURES+
-
 for (i in c(1,length(processed_data_paths))) {
-  # lists the names files that should be md5sum'd from each dataset
-  files_to_md5sum <- list.files(paste(processed_data_paths[i],'raw_feature_bc_matrix/',sep='/'))
+  # lists the names of files that should be md5sum'd from each dataset
+  target_folder_filtered <- paste(processed_data_paths[i],'filtered_feature_bc_matrix',sep='/')
+  files_to_md5sum <- list.files(target_folder_filtered)
   files_parent_dir <- list.files(data_path, "[o*]")[i]
   # full path to the files to be mdsummed, length should be same as that of files_to_md5sum
-  target_files <- paste(processed_data_paths[i],'raw_feature_bc_matrix',files_to_md5sum,sep='/')
+  target_files <- paste(target_folder_filtered,files_to_md5sum,sep='/')
   # copy file into geo uploader script folder and add parent folder to the name to prevent overwriting 
   file.copy(target_files, uploader_path)
   file.rename(from = paste(uploader_path, files_to_md5sum, sep=''), to = paste(uploader_path,files_parent_dir,'_',files_to_md5sum, sep=''))
   # append new names to the md5sums vector
   md5sums_vector_proc_interim <- append(md5sums_vector_proc_interim, paste(uploader_path,files_parent_dir,'_',files_to_md5sum, sep=''))
 }
-
-# FILTERED FEATURES+
-
-
-
 
 files_for_sums_proc <- c()
 md5sums_vector_proc <- c()
