@@ -3,6 +3,7 @@
 ### WRITTEN FOR R 4.3.0.
 
 library(tools)
+library(ezRun)
 ################################################ 
 ### SET VARIABLES HERE
 ## RAW FILES
@@ -21,80 +22,82 @@ sushi_processed_path = "/projects/p24876/o29380_CellRangerCount_2022-09-08--17-4
 ### PART 1: TSV GENERATION
 
 # create directory for project upload
-uploader_path = paste('/scratch/p',as.character(fgcz_p),'_geo_upload/', sep="")
+uploader_path = paste('/scratch/p',as.character(fgcz_p),'_geo_upload', sep="")
 dir.create(uploader_path)
 
 # create directory for output
-output_path = paste(uploader_path,toString(fgcz_p),'_output',sep="")
+output_path = paste0(uploader_path,'/',toString(fgcz_p),'_output')
 dir.create(output_path)
 
 ## RAW FILES
 
+dataset <- ezRead.table(paste0("/srv/gstore", sushi_raw_path, "/dataset.tsv"))
+tarFiles <- paste0("/srv/gstore/projects/", dataset$`RawDataDir [File]`)
+
 # obtain .tar files for md5sums from the SUSHI folder
-
-data_path = paste('/srv/gstore',sushi_raw_path,'/', sep='')
-
-paste(data_path,list.files(data_path, "*.tar"),sep='')
+cmd <- paste('cp', paste(tarFiles, collapse = " "), output_path)
+system(cmd)
 
 # names of raw data tar files, in order to later find the subfolders for processed files (barcodes, features, matrix)
-raw_data_folders <- c()
-md5sums_vector <- c()
-files_for_sums <- c()
+md5sums <- list()
 
 # loop through all copied .tar files, untar and calculate md5sum
-for (i in c(1,length(list.files(uploader_path)))) {
-  new_dir = paste(uploader_path, 
-                  substr(list.files(data_path, "*tar"), 1, nchar(list.files(data_path, "*tar")[i])-4)[i],
-                  '/', sep='')
-  raw_data_folders <- append(raw_data_folders, substr(list.files(data_path, "*tar"), 1, nchar(list.files(data_path, "*tar")[i])-4))
+for (myTarFile in tarFiles) {
+  new_dir = paste0(uploader_path, "/", sub(".tar$", "",
+                                           basename(myTarFile)))
   # untar files into geo uploader project subfolder in scratch
-  untar(paste(data_path,list.files(data_path, "*tar"),sep='')[i], exdir = uploader_path)
+  # untar(myTarFile, exdir = uploader_path)
+  md5sums[[myTarFile]] <- md5sum(files = list.files(new_dir, full.names
+                                                    = TRUE))
+}
+
+rawfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums, names))),
+                              "file checksum" = unlist(md5sums,
+                                                       use.names = FALSE), row.names = NULL, check.names = FALSE)
+
+writexl::write_xlsx(x = rawfile_md5sums, path = paste(output_path,'rawfile_md5sums.xlsx', sep='/'))
+
+## PROCESSED (filtered barcodes, features, matrix)
+
+dataset_proc <- ezRead.table(paste0("/srv/gstore", sushi_processed_path, "/dataset.tsv"))
+proc_paths <- paste0("/srv/gstore/projects/", dataset_proc$`CountMatrix [Link]`)
+
+cmd <- paste('cp -r', paste(proc_paths, collapse = " "), output_path)
+system(cmd)
+
+md5sums_proc <- list()
+md5sums[[myTarFile]] <- md5sum(files = list.files(new_dir, full.names
+                                                  = TRUE))
+
+for (i in seq_along(rownames(dataset_proc))) {
   
-  # save filenames in vector
-  files_for_sums <- append(files_for_sums, list.files(new_dir))
-  print("Retrieved files for md5sum calculation:")
-  list.files(new_dir)
+  # create new folders to put filtered processed files without overwriting folder
+  dataset_name <- rownames(dataset_proc)[i]
+  new_dir <- paste0(output_path,'/filtered_', dataset_name)
+  print(new_dir)
+
+  cmd <- paste0('cp -r ', proc_paths[i],' ', new_dir)
+  system(cmd)
   
-  # save md5sums in vector
-  md5sums_vector <- append(md5sums_vector, md5sum(files = paste(new_dir, list.files(new_dir),sep='')))
-  
-  # remove directory containing fastq.gz files (don't waste space)
+  # put renamed files into the output folder, remove subfolders
+  print(list.files(new_dir))
+  file.rename(from = paste(new_dir, list.files(new_dir), sep='/'), to = paste0(output_path,'/',dataset_name,'_',list.files(new_dir)))
   unlink(new_dir, recursive = TRUE)
+  
+  new_proc_files <- list.files(output_path, '*gz', full.names = TRUE)
+  
+  for (filename in new_proc_files) {
+    R.utils::gunzip(filename)
+  }
+  
+  md5sums_proc[[dataset_name]] <- md5sum(files = sub(".gz$", "", new_proc_files))
 }
 
-rawfile_md5sums <- data.frame("file name" = files_for_sums,"file checksum" = md5sums_vector)
-write.table(rawfile_md5sums, file = paste(output_path,'rawfile_md5sums.tsv',sep='/'), sep = '\t')
+cmd <- paste('rm -r', paste0(output_path,'/','filtered_feature_bc_matrix'))
+system(cmd)
 
-## PROCESSED FILES - filtered
+procfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums_proc, names))),
+                              "file checksum" = unlist(md5sums_proc,
+                                                       use.names = FALSE), row.names = NULL, check.names = FALSE)
 
-data_path = paste('/srv/gstore',sushi_processed_path,'/', sep='')
-
-processed_data_paths <- paste(data_path, list.files(data_path, "[o*]"), sep = '')
-md5sums_vector_proc_interim <- c()
-
-for (i in c(1,length(processed_data_paths))) {
-  # lists the names of files that should be md5sum'd from each dataset
-  target_folder_filtered <- paste(processed_data_paths[i],'filtered_feature_bc_matrix',sep='/')
-  files_to_md5sum <- list.files(target_folder_filtered)
-  files_parent_dir <- list.files(data_path, "[o*]")[i]
-  # full path to the files to be mdsummed, length should be same as that of files_to_md5sum
-  target_files <- paste(target_folder_filtered,files_to_md5sum,sep='/')
-  # copy file into geo uploader script folder and add parent folder to the name to prevent overwriting 
-  file.copy(target_files, uploader_path)
-  file.rename(from = paste(uploader_path, files_to_md5sum, sep=''), to = paste(uploader_path,files_parent_dir,'_',files_to_md5sum, sep=''))
-  # append new names to the md5sums vector
-  md5sums_vector_proc_interim <- append(md5sums_vector_proc_interim, paste(uploader_path,files_parent_dir,'_',files_to_md5sum, sep=''))
-}
-
-files_for_sums_proc <- c()
-md5sums_vector_proc <- c()
-
-for (filename in md5sums_vector_proc_interim) {
-  R.utils::gunzip(filename)
-  filename_gunzip <- substr(filename,start = 1,stop = nchar(filename)-3)
-  files_for_sums_proc <- append(files_for_sums_proc, strsplit(filename_gunzip,'/')[[1]][4])
-  md5sums_vector_proc <- append(md5sums_vector_proc,md5sum(filename_gunzip))
-}
-
-procfile_md5sums <- data.frame("file name" = files_for_sums_proc,"file checksum" = md5sums_vector_proc)
-write.table(procfile_md5sums, file = paste(output_path,'procfile_md5sums.tsv',sep='/'), sep = '\t')
+writexl::write_xlsx(x = procfile_md5sums, path = paste(output_path,'procfile_md5sums.xlsx', sep='/'))
