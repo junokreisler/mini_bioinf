@@ -19,7 +19,14 @@ sushi_raw_path = "/projects/p24876/NovaSeq_20220906_NOV1425_o29380_DataDelivery"
 sushi_processed_path = "/projects/p24876/o29380_CellRangerCount_2022-09-08--17-47-41"
 
 ################################################ 
-### PART 1: TSV GENERATION
+### PART 1: XLSX GENERATION
+
+# define output for metadata and info sheet
+
+infolist <- list()
+
+file_metadata <- list()
+
 
 # create directory for project upload
 uploader_path = paste('/scratch/p',as.character(fgcz_p),'_geo_upload', sep="")
@@ -43,19 +50,30 @@ md5sums <- list()
 
 # loop through all copied .tar files, untar and calculate md5sum
 for (myTarFile in tarFiles) {
-  new_dir = paste0(uploader_path, "/", sub(".tar$", "",
-                                           basename(myTarFile)))
+  tar_name <- sub(".tar$", "",
+                  basename(myTarFile))
+  # start adding information to the first sheet for sample metadata
+  file_metadata[[tar_name]] <- c("library name" = tar_name, "title" = tar_name, "organism" = dataset[tar_name, "Species"], 
+                                 "tissue" = '', "cell line" = '', "cell type" = '', "genotype" = '', "treatment" = '',
+                                 "molecule"= '', "single or paired-end"	= '', "instrument model" = '',	"description" = '')
+  
+  new_dir = paste0(uploader_path, "/", tar_name)
   # untar files into geo uploader project subfolder in scratch
-  # untar(myTarFile, exdir = uploader_path)
+  untar(myTarFile, exdir = output_path)
   md5sums[[myTarFile]] <- md5sum(files = list.files(new_dir, full.names
                                                     = TRUE))
+  rawfiles_for_metadata <- c("raw file" = basename(names(md5sums[[myTarFile]])))
+
+
+  file_metadata[[tar_name]] <- append(file_metadata[[tar_name]], rawfiles_for_metadata)
+  
 }
 
 rawfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums, names))),
                               "file checksum" = unlist(md5sums,
                                                        use.names = FALSE), row.names = NULL, check.names = FALSE)
 
-writexl::write_xlsx(x = rawfile_md5sums, path = paste(output_path,'rawfile_md5sums.xlsx', sep='/'))
+# writexl::write_xlsx(x = rawfile_md5sums, path = paste(output_path,'rawfile_md5sums.xlsx', sep='/'))
 
 ## PROCESSED (filtered barcodes, features, matrix)
 
@@ -66,8 +84,6 @@ cmd <- paste('cp -r', paste(proc_paths, collapse = " "), output_path)
 system(cmd)
 
 md5sums_proc <- list()
-md5sums[[myTarFile]] <- md5sum(files = list.files(new_dir, full.names
-                                                  = TRUE))
 
 for (i in seq_along(rownames(dataset_proc))) {
   
@@ -90,7 +106,10 @@ for (i in seq_along(rownames(dataset_proc))) {
     R.utils::gunzip(filename)
   }
   
-  md5sums_proc[[dataset_name]] <- md5sum(files = sub(".gz$", "", new_proc_files))
+  new_proc_filenames <- c("processed data file" = basename(sub(".gz$", "", new_proc_files)))
+  md5sums_proc[[dataset_name]] <- md5sum(files = new_proc_filenames)
+
+  file_metadata[[dataset_name]] <- append(file_metadata[[dataset_name]], new_proc_filenames)
 }
 
 cmd <- paste('rm -r', paste0(output_path,'/','filtered_feature_bc_matrix'))
@@ -100,4 +119,22 @@ procfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums_proc
                               "file checksum" = unlist(md5sums_proc,
                                                        use.names = FALSE), row.names = NULL, check.names = FALSE)
 
-writexl::write_xlsx(x = procfile_md5sums, path = paste(output_path,'procfile_md5sums.xlsx', sep='/'))
+# writexl::write_xlsx(x = procfile_md5sums, path = paste(output_path,'procfile_md5sums.xlsx', sep='/'))
+
+# transform metadata list into dataframe, then append to infolist
+
+metadata_df <- data.frame()
+
+for (tar_name in file_metadata) {
+  sample_entry_df = data.frame(t(tar_name), check.names = FALSE)
+  metadata_df <- rbind(metadata_df, sample_entry_df)
+}
+
+infolist[["Metadata"]] <- metadata_df
+infolist[["Raw file md5sums"]] <- rawfile_md5sums
+infolist[["Processed file md5sums"]] <- procfile_md5sums
+
+writexl::write_xlsx(x = infolist, path = paste(output_path,'infolist.xlsx', sep='/'))
+
+
+### UPLOAD METADATA
