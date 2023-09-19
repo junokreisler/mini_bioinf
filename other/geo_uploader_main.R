@@ -1,4 +1,5 @@
 ### GEO UPLOADER SCRIPT FOR SINGLE-CELL DATASETS
+### PART 1 - METADATA CREATION
 ### FGCZ
 ### WRITTEN FOR R 4.3.0.
 
@@ -73,8 +74,6 @@ rawfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums, name
                               "file checksum" = unlist(md5sums,
                                                        use.names = FALSE), row.names = NULL, check.names = FALSE)
 
-# writexl::write_xlsx(x = rawfile_md5sums, path = paste(output_path,'rawfile_md5sums.xlsx', sep='/'))
-
 ## PROCESSED (filtered barcodes, features, matrix)
 
 dataset_proc <- ezRead.table(paste0("/srv/gstore", sushi_processed_path, "/dataset.tsv"))
@@ -119,9 +118,6 @@ procfile_md5sums <- data.frame("file name" = basename(unlist(lapply(md5sums_proc
                               "file checksum" = unlist(md5sums_proc,
                                                        use.names = FALSE), row.names = NULL, check.names = FALSE)
 
-# writexl::write_xlsx(x = procfile_md5sums, path = paste(output_path,'procfile_md5sums.xlsx', sep='/'))
-
-# transform metadata list into dataframe, then append to infolist
 
 metadata_df <- data.frame()
 
@@ -134,7 +130,8 @@ infolist[["Metadata"]] <- metadata_df
 infolist[["Raw file md5sums"]] <- rawfile_md5sums
 infolist[["Processed file md5sums"]] <- procfile_md5sums
 
+metadata_df <- readxl::read_xlsx('/scratch/p24876_geo_upload/24876_output/infolist.xlsx')
+rawfile_md5sums <- readxl::read_xlsx('/scratch/p24876_geo_upload/24876_output/rawfile_md5sums.xlsx')
+procfile_md5sums <- readxl::read_xlsx('/scratch/p24876_geo_upload/24876_output/procfile_md5sums.xlsx')
+
 writexl::write_xlsx(x = infolist, path = paste(output_path,'infolist.xlsx', sep='/'))
-
-
-### UPLOAD METADATA
